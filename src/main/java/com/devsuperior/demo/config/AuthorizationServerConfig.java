@@ -37,6 +37,7 @@ import org.springframework.security.oauth2.server.authorization.settings.OAuth2T
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -65,29 +66,24 @@ public class AuthorizationServerConfig {
 	@Order(2)
 	public SecurityFilterChain asSecurityFilterChain(HttpSecurity http) throws Exception {
 
-        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
-                new OAuth2AuthorizationServerConfigurer();
+        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
-        http
-                .securityMatcher("/oauth2/**", "/.well-known/**")
-                .with(authorizationServerConfigurer, Customizer.withDefaults());
+        http.securityMatcher("/oauth2/**", "/.well-known/**");
 
-        authorizationServerConfigurer
+        http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .tokenEndpoint(tokenEndpoint -> tokenEndpoint
                         .accessTokenRequestConverter(new CustomPasswordAuthenticationConverter())
                         .authenticationProvider(new CustomPasswordAuthenticationProvider(
-                                authorizationService(),
-                                tokenGenerator(),
-                                userDetailsService,
-                                passwordEncoder()
+                                authorizationService(), tokenGenerator(), userDetailsService, passwordEncoder()
                         ))
                 );
 
-        http
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        http.oauth2ResourceServer(oauth2ResourceServer ->
+                oauth2ResourceServer.jwt(Customizer.withDefaults())
+        );
 
         return http.build();
-    }
+	}
 
 	@Bean
 	public OAuth2AuthorizationService authorizationService() {
